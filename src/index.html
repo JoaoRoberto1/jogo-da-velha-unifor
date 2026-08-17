@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jogo da Velha - UNIFOR</title>
+<style>
+  :root{
+    --azul-unifor:#003366;
+    --azul-destaque:#0056b3;
+    --laranja:#d97706;
+    --fundo:#f4f6f9;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:var(--fundo);
+    font-family:'Segoe UI', Arial, sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:28px 16px 60px;
+    color:var(--azul-unifor);
+  }
+  header{text-align:center;margin-bottom:22px;}
+  .subtitle{color:var(--azul-destaque);letter-spacing:3px;font-weight:700;font-size:.85rem;margin:0;}
+  h1{color:var(--azul-unifor);margin:6px 0 0;font-size:2.1rem;letter-spacing:1px;}
+  .controls{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;margin-bottom:22px;}
+  .controls label{display:flex;flex-direction:column;font-size:.78rem;font-weight:700;color:var(--azul-unifor);gap:5px;letter-spacing:.5px;}
+  select{padding:9px 12px;border-radius:6px;border:1px solid #c8d2dc;font-size:.9rem;background:#fff;color:var(--azul-unifor);cursor:pointer;}
+  select:focus{outline:2px solid var(--azul-destaque);}
+  .scoreboard{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    width:100%;
+    max-width:420px;
+    background:#fff;
+    border-radius:10px;
+    padding:14px 22px;
+    box-shadow:0 2px 10px rgba(0,51,102,.12);
+    margin-bottom:14px;
+  }
+  .score-box{text-align:center;min-width:80px;}
+  .score-box .label{font-size:.72rem;font-weight:700;letter-spacing:1px;color:#667;}
+  .score-box .value{font-size:1.9rem;font-weight:800;line-height:1.2;}
+  #scoreX{color:var(--azul-unifor);}
+  #scoreO{color:var(--laranja);}
+  .round-box{text-align:center;}
+  .round-box .label{font-size:.68rem;color:#667;font-weight:700;letter-spacing:1px;}
+  .round-box .value{font-size:1.05rem;font-weight:700;color:var(--azul-unifor);}
+  #status{font-weight:700;font-size:1.15rem;margin-bottom:18px;min-height:1.4em;text-align:center;}
+  .board-wrap{position:relative;}
+  #board{
+    display:grid;
+    grid-template-columns:repeat(3,100px);
+    grid-template-rows:repeat(3,100px);
+    gap:8px;
+    background:var(--azul-unifor);
+    padding:8px;
+    border-radius:10px;
+  }
+  .cell{
+    background:#fff;
+    border:none;
+    border-radius:6px;
+    font-size:2.6rem;
+    font-weight:800;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    color:var(--azul-unifor);
+    transition:background .15s;
+  }
+  .cell.o{color:var(--laranja);}
+  .cell:not(:disabled):hover{background:#eaf1fb;}
+  .cell:disabled{cursor:default;}
+  #winLine{
+    position:absolute;
+    height:6px;
+    background:var(--laranja);
+    border-radius:4px;
+    top:0;left:0;
+    width:0;
+    opacity:0;
+    transform-origin:0 50%;
+    pointer-events:none;
+    transition:opacity .2s ease;
+    box-shadow:0 0 10px rgba(217,119,6,.8);
+  }
+  #restartBtn{
+    margin-top:24px;
+    padding:13px 30px;
+    background:var(--azul-unifor);
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    font-weight:700;
+    letter-spacing:1px;
+    cursor:pointer;
+    font-size:.92rem;
+  }
+  #restartBtn:hover{background:var(--azul-destaque);}
+  #confettiCanvas{
+    position:fixed;
+    top:0;left:0;
+    width:100%;height:100%;
+    pointer-events:none;
+    z-index:999;
+  }
+  @media (max-width:420px){
+    #board{grid-template-columns:repeat(3,27vw);grid-template-rows:repeat(3,27vw);}
+    .cell{font-size:2rem;}
+  }
+</style>
+</head>
+<body>
+<canvas id="confettiCanvas"></canvas>
+
+<header>
+  <p class="subtitle">UNIVERSIDADE DE FORTALEZA</p>
+  <h1>JOGO DA VELHA</h1>
+</header>
+
+<div class="controls">
+  <label for="modeSelect">Modo de Jogo
+    <select id="modeSelect">
+      <option value="pvp">2 Jogadores (PVP)</option>
+      <option value="cpu">Contra o Computador</option>
+    </select>
+  </label>
+  <label for="formatSelect">Formato da Partida
+    <select id="formatSelect">
+      <option value="single">Partida Única</option>
+      <option value="bo3">Melhor de 3 (MD3)</option>
+    </select>
+  </label>
+</div>
+
+<div class="scoreboard">
+  <div class="score-box">
+    <div class="label">JOGADOR X</div>
+    <div class="value" id="scoreX">0</div>
+  </div>
+  <div class="round-box">
+    <div class="label">RODADA</div>
+    <div class="value" id="roundCounter">1/1</div>
+  </div>
+  <div class="score-box">
+    <div class="label" id="labelO">JOGADOR O</div>
+    <div class="value" id="scoreO">0</div>
+  </div>
+</div>
+
+<div id="status">Vez do Jogador X</div>
+
+<div class="board-wrap">
+  <div id="board"></div>
+  <div id="winLine"></div>
+</div>
+
+<button id="restartBtn">REINICIAR JOGO</button>
+
+<script>
+(function(){
+  const boardEl = document.getElementById('board');
+  const winLineEl = document.getElementById('winLine');
+  const statusEl = document.getElementById('status');
+  const scoreXEl = document.getElementById('scoreX');
+  const scoreOEl = document.getElementById('scoreO');
+  const roundCounterEl = document.getElementById('roundCounter');
+  const modeSelect = document.getElementById('modeSelect');
+  const formatSelect = document.getElementById('formatSelect');
+  const restartBtn = document.getElementById('restartBtn');
+  const labelO = document.getElementById('labelO');
+  const confettiCanvas = document.getElementById('confettiCanvas');
+  const ctx = confettiCanvas.getContext('2d');
+
+  let options = Array(9).fill('');
+  let currentPlayer = 'X';
+  let running = false;
+  let winsX = 0;
+  let winsO = 0;
+  let currentRound = 1;
+  let cells = [];
+
+  const winPatterns = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+
+  function buildBoard(){
+    boardEl.innerHTML = '';
+    cells = [];
+    for(let i=0;i<9;i++){
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cell';
+      btn.dataset.index = i;
+      btn.setAttribute('aria-label', 'Célula ' + (i+1));
+      btn.addEventListener('click', onCellClick);
+      boardEl.appendChild(btn);
+      cells.push(btn);
+    }
+  }
+
+  function totalRounds(){
+    return formatSelect.value === 'bo3' ? 3 : 1;
+  }
+
+  function updateRoundCounter(){
+    roundCounterEl.textContent = currentRound + '/' + totalRounds();
+  }
+
+  function updateLabels(){
+    labelO.textContent = modeSelect.value === 'cpu' ? 'COMPUTADOR' : 'JOGADOR O';
+  }
+
+  function resetBoardVisual(){
+    options = Array(9).fill('');
+    cells.forEach(c=>{
+      c.textContent = '';
+      c.className = 'cell';
+      c.disabled = false;
+    });
+    winLineEl.style.opacity = 0;
+    winLineEl.style.width = 0;
+  }
+
+  function startNewGame(){
+    winsX = 0; winsO = 0; currentRound = 1; currentPlayer = 'X';
+    scoreXEl.textContent = 0;
+    scoreOEl.textContent = 0;
+    updateLabels();
+    updateRoundCounter();
+    resetBoardVisual();
+    running = true;
+    statusEl.textContent = 'Vez do Jogador X';
+  }
+
+  function startNewRound(){
+    currentPlayer = 'X';
+    resetBoardVisual();
+    running = true;
+    statusEl.textContent = 'Vez do Jogador X';
+  }
+
+  function onCellClick(e){
+    if(!running) return;
+    const idx = Number(e.currentTarget.dataset.index);
+    if(options[idx] !== '') return;
+    makeMove(idx);
+  }
+
+  function makeMove(idx){
+    options[idx] = currentPlayer;
+    const cellEl = cells[idx];
+    cellEl.textContent = currentPlayer;
+    cellEl.classList.add(currentPlayer.toLowerCase());
+    cellEl.disabled = true;
+    playMoveSound(currentPlayer);
+    evaluateBoard();
+  }
+
+  function evaluateBoard(){
+    const winPattern = checkWinner();
+    if(winPattern){
+      handleRoundWin(currentPlayer, winPattern);
+      return;
+    }
+    if(options.every(v => v !== '')){
+      handleDraw();
+      return;
+    }
+    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+    statusEl.textContent = 'Vez do Jogador ' + currentPlayer;
+    if(modeSelect.value === 'cpu' && currentPlayer === 'O'){
+      cpuTurn();
+    }
+  }
+
+  function checkWinner(){
+    for(const pattern of winPatterns){
+      const [a,b,c] = pattern;
+      if(options[a] && options[a] === options[b] && options[a] === options[c]){
+        return pattern;
+      }
+    }
+    return null;
+  }
+
+  function handleRoundWin(winner, pattern){
+    running = false;
+    cells.forEach(c => c.disabled = true);
+    drawWinLine(pattern);
+    fireConfetti();
+    playVictorySound();
+    if(winner === 'X'){ winsX++; scoreXEl.textContent = winsX; }
+    else { winsO++; scoreOEl.textContent = winsO; }
+
+    const winnerLabel = winner === 'X' ? 'Jogador X' : (modeSelect.value === 'cpu' ? 'Computador' : 'Jogador O');
+
+    if(formatSelect.value === 'bo3'){
+      if(winsX === 2 || winsO === 2){
+        statusEl.textContent = winnerLabel + ' é o campeão da partida!';
+      } else if(currentRound < 3){
+        statusEl.textContent = winnerLabel + ' venceu a rodada!';
+        currentRound++;
+        setTimeout(()=>{
+          updateRoundCounter();
+          startNewRound();
+        }, 2000);
+      } else {
+        statusEl.textContent = winnerLabel + ' venceu a rodada!';
+      }
+    } else {
+      statusEl.textContent = winnerLabel + ' venceu o jogo!';
+    }
+  }
+
+  function handleDraw(){
+    running = false;
+    cells.forEach(c => c.disabled = true);
+    playDrawSound();
+    statusEl.textContent = 'Rodada Empatada!';
+    if(formatSelect.value === 'bo3' && currentRound < 3){
+      setTimeout(()=>{
+        startNewRound();
+      }, 2000);
+    }
+  }
+
+  function cpuTurn(){
+    running = false;
+    cells.forEach(c => { if(c.textContent === '') c.disabled = true; });
+    setTimeout(()=>{
+      const empty = options.map((v,i) => v === '' ? i : null).filter(v => v !== null);
+      if(empty.length === 0) return;
+      const choice = empty[Math.floor(Math.random() * empty.length)];
+      running = true;
+      cells.forEach(c => { if(c.textContent === '') c.disabled = false; });
+      makeMove(choice);
+    }, 400);
+  }
+
+  function drawWinLine(pattern){
+    const [a,,c] = pattern;
+    const boardRect = boardEl.getBoundingClientRect();
+    const rectA = cells[a].getBoundingClientRect();
+    const rectC = cells[c].getBoundingClientRect();
+    const x1 = rectA.left + rectA.width/2 - boardRect.left;
+    const y1 = rectA.top + rectA.height/2 - boardRect.top;
+    const x2 = rectC.left + rectC.width/2 - boardRect.left;
+    const y2 = rectC.top + rectC.height/2 - boardRect.top;
+    const dx = x2 - x1, dy = y2 - y1;
+    const length = Math.sqrt(dx*dx + dy*dy) + 40;
+    const angle = Math.atan2(dy, dx) * 180/Math.PI;
+    winLineEl.style.width = length + 'px';
+    winLineEl.style.left = (x1 - 20) + 'px';
+    winLineEl.style.top = y1 + 'px';
+    winLineEl.style.transform = 'rotate(' + angle + 'deg)';
+    winLineEl.style.opacity = 1;
+  }
+
+  /* ---- Áudio sintetizado (Web Audio API) ---- */
+  let audioCtx;
+  function getAudioCtx(){
+    if(!audioCtx){
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if(audioCtx.state === 'suspended'){
+      audioCtx.resume();
+    }
+    return audioCtx;
+  }
+  function playTone(freq, duration, type, delay, gainValue){
+    try{
+      const ctxA = getAudioCtx();
+      const osc = ctxA.createOscillator();
+      const gain = ctxA.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.value = freq;
+      const g = gainValue !== undefined ? gainValue : 0.15;
+      osc.connect(gain);
+      gain.connect(ctxA.destination);
+      const startTime = ctxA.currentTime + (delay || 0);
+      gain.gain.setValueAtTime(g, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    }catch(err){ /* API de áudio indisponível: falha silenciosamente */ }
+  }
+  function playMoveSound(player){
+    if(player === 'X'){
+      playTone(520, 0.12, 'triangle');
+    } else {
+      playTone(330, 0.12, 'square');
+    }
+  }
+  function playVictorySound(){
+    [523.25, 659.25, 783.99, 1046.5].forEach((f,i) => playTone(f, 0.4, 'sine', i*0.08, 0.12));
+  }
+  function playDrawSound(){
+    [440, 392, 349.23, 293.66].forEach((f,i) => playTone(f, 0.25, 'sawtooth', i*0.12, 0.1));
+  }
+
+  /* ---- Confetes (canvas, sem dependências externas) ---- */
+  let confettiParticles = [];
+  let confettiAnimating = false;
+  function resizeCanvas(){
+    confettiCanvas.width = window.innerWidth;
+    confettiCanvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  function fireConfetti(){
+    const colors = ['#003366', '#0056b3', '#d97706', '#ffffff', '#2e8b57'];
+    for(let i=0; i<120; i++){
+      confettiParticles.push({
+        x: Math.random() * confettiCanvas.width,
+        y: -20 - Math.random() * 200,
+        w: 6 + Math.random() * 6,
+        h: 8 + Math.random() * 8,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        speedY: 2 + Math.random() * 3,
+        speedX: -2 + Math.random() * 4,
+        rotation: Math.random() * 360,
+        rotationSpeed: -8 + Math.random() * 16,
+        life: 0,
+        maxLife: 180 + Math.random() * 60
+      });
+    }
+    if(!confettiAnimating){
+      confettiAnimating = true;
+      requestAnimationFrame(animateConfetti);
+    }
+  }
+
+  function animateConfetti(){
+    ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    confettiParticles.forEach(p => {
+      p.x += p.speedX;
+      p.y += p.speedY;
+      p.rotation += p.rotationSpeed;
+      p.life++;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rotation * Math.PI/180);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+      ctx.restore();
+    });
+    confettiParticles = confettiParticles.filter(p => p.life < p.maxLife && p.y < confettiCanvas.height + 40);
+    if(confettiParticles.length > 0){
+      requestAnimationFrame(animateConfetti);
+    } else {
+      confettiAnimating = false;
+      ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    }
+  }
+
+  /* ---- Controles ---- */
+  modeSelect.addEventListener('change', () => {
+    updateLabels();
+    startNewGame();
+  });
+  formatSelect.addEventListener('change', () => {
+    startNewGame();
+  });
+  restartBtn.addEventListener('click', startNewGame);
+
+  buildBoard();
+  startNewGame();
+})();
+</script>
+</body>
+</html>
