@@ -7,7 +7,7 @@ O projeto foi construído a partir da especificação de caso de uso [`docs/cdu_
 **Autor:** _[SEU NOME COMPLETO AQUI]_
 **Matrícula:** _[SUA MATRÍCULA AQUI]_
 
-🔗 **Aplicação publicada (GitHub Pages):** _[cole aqui o link após ativar o GitHub Pages, ex: https://seu-usuario.github.io/jogo-da-velha-unifor/src/]_
+🔗 **Aplicação publicada (GitHub Pages):** https://joaoroberto1.github.io/jogo-da-velha-unifor/
 
 ## Como executar
 
